@@ -34,24 +34,29 @@
     src: default.j2
     dest: '/etc/nginx/sites-available/default'
 
+- name: Nginx | création de /etc/nginx/nginxconfig.io
+  file: state=directory path=/etc/nginx/nginxconfig.io
+
+- name: Nginx | nginx.conf
+  template:
+    src: '{{ item }}.j2'
+    dest: '/etc/nginx/{{item}}'
+  loop:
+    - nginx.conf
+    - nginxconfig.io/general.conf
+    - nginxconfig.io/proxy.conf
+    - nginxconfig.io/security.conf
+
 - name: 'Nginx | Vhost {{ domain }}'
   template:
     src: vhost.j2
     dest: '/etc/nginx/sites-available/{{ domain }}'
-  notify: nginx reload
+  notify: nginx reloaded
 
 - name: 'Nginx | Vhost {{ domain }}'
+  become: yes
   file:
     path: '/etc/nginx/sites-enabled/{{ domain }}'
     src: '/etc/nginx/sites-available/{{ domain }}'
     state: link
-  notify: nginx reload
-
-- name: 'Nginx | www'
-  become: yes
-  file:
-    path: '~/dev.com'
-    src: '/var/www/'
-    state: link
-  notify: nginx reload
-
+  notify: nginx reloaded

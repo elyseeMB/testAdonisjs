@@ -1,5 +1,73 @@
----
-- name: AdonisJs | Clone
-  git:
-    repo: 'https://github.com/elyseeMB/prep_website_abdz.git'
-    dest: '{{root_path}}'
+- name: build production
+  become_user: '{{ansible_user}}'
+  block:
+    - name: AdonisJs | Clone
+      git:
+        repo: 'https://github.com/elyseeMB/testAdonisjs.git'
+        dest: '{{root_path}}'
+        force: yes
+
+    - name: Copier le fichier .env
+      template:
+        src: env.j2
+        dest: '{{root_path}}/.env'
+
+    - name: Install dependencies with pnpm
+      command: /usr/local/nvm/versions/node/v22.14.0/bin/pnpm install
+      args:
+        chdir: '{{root_path}}'
+      environment:
+        PATH: '/usr/local/nvm/versions/node/v22.14.0/bin:{{ ansible_env.PATH }}'
+
+    - name: Build du projet
+      command: /usr/local/nvm/versions/node/v22.14.0/bin/pnpm run build
+      args:
+        chdir: '{{root_path}}'
+      environment:
+        PATH: '/usr/local/nvm/versions/node/v22.14.0/bin:{{ ansible_env.PATH }}'
+
+    - name: Installation des dépendances de production
+      command: /usr/local/nvm/versions/node/v22.14.0/bin/pnpm i --prod
+      args:
+        chdir: '{{ root_path }}/build'
+      environment:
+        PATH: '/usr/local/nvm/versions/node/v22.14.0/bin:{{ ansible_env.PATH }}'
+
+    - name: Copier le fichier .env dans le dossier build
+      template:
+        src: env.j2
+        dest: '{{root_path}}/build/.env'
+
+    - name: Démarrer avec PM2
+      command: /usr/local/nvm/versions/node/v22.14.0/bin/pm2 start bin/server.js
+      args:
+        chdir: '{{ root_path }}/build'
+      environment:
+        PATH: '/usr/local/nvm/versions/node/v22.14.0/bin:{{ ansible_env.PATH }}'
+
+    - name: Setup PM2 startup script
+      become: yes
+      shell: pm2 startup systemd -u {{ ansible_user }} --hp /home/{{ ansible_user }}
+      register: pm2_output
+      failed_when: false
+
+    - name: Debug - Afficher la sortie de PM2 startup
+      debug:
+        var: pm2_output.stdout_lines[-1]
+      register: pm2_v2
+
+    - name: Extraire et exécuter la commande PM2 startup | voir
+      become: yes
+      become_method: sudo
+      shell: 'echo "{{ sudo_password }}" | sudo -S {{ pm2_output.stdout_lines[-1] }}'
+      vars:
+        sudo_password: 'dev'
+
+    # - name: Extraire et exécuter la commande PM2 startup
+    #   become: yes
+    #   shell: "{{ pm2_output.stdout_lines | select('search', 'sudo env PATH=') | list | first }}"
+    #   when: pm2_output.stdout is search("sudo env PATH=")
+
+    - name: Save PM2 process list
+      become: yes
+      command: pm2 save
