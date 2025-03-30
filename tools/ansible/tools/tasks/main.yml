@@ -7,4 +7,5 @@
       - redis
       - gnupg
       - curl
+      - fail2ban
     state: latest

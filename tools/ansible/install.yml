@@ -15,13 +15,16 @@
   #       upgrade: dist
   #       update_cache: yes
 
-  # tasks:
+  tasks:
 
   roles:
-    # - { role: tools, tags: tools }
-    # - { role: node, tags: node }
+    - { role: docker, tags: docker }
+    - { role: user, tags: user }
+    - { role: tools, tags: tools }
+    - { role: node, tags: node }
     - { role: app, tags: app }
     - { role: nginx, tags: nginx }
+    - { role: stats, tags: stats }
 # ---
 # - hosts: local
 #   become: yes
